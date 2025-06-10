@@ -70,9 +70,9 @@ const updateInvoiceStatusSchema = Joi.object({
   }),
   // Optionally, allow the balance to be explicitly set to 0.00
   balance: Joi.number().precision(2).valid(0.00).optional().messages({
-      'number.base': 'Balance must be a number.',
-      'number.precision': 'Balance must have at most 2 decimal places.',
-      'any.only': 'Balance can only be set to 0.00 when marking as paid.'
+    'number.base': 'Balance must be a number.',
+    'number.precision': 'Balance must have at most 2 decimal places.',
+    'any.only': 'Balance can only be set to 0.00 when marking as paid.'
   })
 });
 

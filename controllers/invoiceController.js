@@ -113,11 +113,11 @@ exports.createInvoice = async (req, res, next) => {
         error: `The invoice code '${req.body.invoiceCode}' is already in use.`
       });
     } else if (err instanceof ForeignKeyConstraintError) {
-        logger.error(`Foreign key constraint error during invoice creation: ${err.message}`);
-        return res.status(400).json({
-            message: 'Invoice creation failed due to invalid related data.',
-            error: 'Provided Company ID does not exist or is invalid.'
-        });
+      logger.error(`Foreign key constraint error during invoice creation: ${err.message}`);
+      return res.status(400).json({
+        message: 'Invoice creation failed due to invalid related data.',
+        error: 'Provided Company ID does not exist or is invalid.'
+      });
     }
     else if (err instanceof ValidationError) {
       logger.error(`Sequelize validation error during invoice creation: ${err.message}`);
@@ -132,72 +132,72 @@ exports.createInvoice = async (req, res, next) => {
 };
 
 exports.patchInvoiceStatus = async (req, res, next) => {
-    const transaction = await Invoice.sequelize.transaction(); // Start a transaction
-    try {
-      const { id } = req.params; // Invoice ID from URL
-      const { status, balance } = req.body; // Expecting status to be 'paid'
-  
-      // 1. Input Validation using Joi
-      const { error } = updateInvoiceStatusSchema.validate(req.body);
-      if (error) {
-        logger.warn(`Validation error during invoice status update for ID ${id}: ${error.details[0].message}`);
-        await transaction.rollback();
-        return res.status(400).json({
-          message: 'Invoice status update failed due to invalid input',
-          error: error.details[0].message
-        });
-      }
-  
-      const invoice = await Invoice.findByPk(id, { transaction });
-  
-      if (!invoice) {
-        logger.warn(`Attempt to update status for non-existent invoice with ID: ${id}`);
-        await transaction.rollback();
-        return res.status(404).json({ message: 'Invoice not found.' });
-      }
-  
-      // Check current status before update
-      if (invoice.status === 'paid') {
-        logger.warn(`Invoice with ID ${id} is already paid. No action taken.`);
-        await transaction.rollback();
-        return res.status(200).json({
-          message: 'Invoice is already paid. No changes applied.',
-          invoice
-        });
-      }
-  
-      // Prepare update data
-      const updateData = { status: 'paid', balance: 0.00 };
-  
-      // Update the invoice status and balance
-      const [updatedRows] = await Invoice.update(updateData, {
-        where: { id },
-        returning: true, // For PostgreSQL, returns the updated object
-        transaction
+  const transaction = await Invoice.sequelize.transaction(); // Start a transaction
+  try {
+    const { id } = req.params; // Invoice ID from URL
+    const { status, balance } = req.body; // Expecting status to be 'paid'
+
+    // 1. Input Validation using Joi
+    const { error } = updateInvoiceStatusSchema.validate(req.body);
+    if (error) {
+      logger.warn(`Validation error during invoice status update for ID ${id}: ${error.details[0].message}`);
+      await transaction.rollback();
+      return res.status(400).json({
+        message: 'Invoice status update failed due to invalid input',
+        error: error.details[0].message
       });
-  
-      if (updatedRows === 0) {
-        logger.warn(`Invoice status update for ID ${id} resulted in no changes or was not found.`);
-        await transaction.rollback();
-        return res.status(400).json({ message: 'No changes applied to invoice status.' });
-      }
-  
-      // Fetch the updated invoice to return in the response
-      const updatedInvoice = await Invoice.findByPk(id, { transaction });
-  
-      await transaction.commit(); // Commit the transaction if all operations succeed
-  
-      logger.info(`Invoice ID ${id} status updated to 'paid'.`);
-      res.status(200).json({
-        message: 'Invoice status updated to paid successfully',
-        invoice: updatedInvoice
-      });
-  
-    } catch (err) {
-      await transaction.rollback(); // Rollback transaction on any error
-  
-      // Centralized error logging for this controller function
-      logger.error(`An unexpected error occurred during invoice status update for ID ${req.params.id}: ${err.message}`, { stack: err.stack });
-      next(err); // Pass error to the centralized error handler middleware
     }
-  };
+
+    const invoice = await Invoice.findByPk(id, { transaction });
+
+    if (!invoice) {
+      logger.warn(`Attempt to update status for non-existent invoice with ID: ${id}`);
+      await transaction.rollback();
+      return res.status(404).json({ message: 'Invoice not found.' });
+    }
+
+    // Check current status before update
+    if (invoice.status === 'paid') {
+      logger.warn(`Invoice with ID ${id} is already paid. No action taken.`);
+      await transaction.rollback();
+      return res.status(200).json({
+        message: 'Invoice is already paid. No changes applied.',
+        invoice
+      });
+    }
+
+    // Prepare update data
+    const updateData = { status: 'paid', balance: 0.00 };
+
+    // Update the invoice status and balance
+    const [updatedRows] = await Invoice.update(updateData, {
+      where: { id },
+      returning: true, // For PostgreSQL, returns the updated object
+      transaction
+    });
+
+    if (updatedRows === 0) {
+      logger.warn(`Invoice status update for ID ${id} resulted in no changes or was not found.`);
+      await transaction.rollback();
+      return res.status(400).json({ message: 'No changes applied to invoice status.' });
+    }
+
+    // Fetch the updated invoice to return in the response
+    const updatedInvoice = await Invoice.findByPk(id, { transaction });
+
+    await transaction.commit(); // Commit the transaction if all operations succeed
+
+    logger.info(`Invoice ID ${id} status updated to 'paid'.`);
+    res.status(200).json({
+      message: 'Invoice status updated to paid successfully',
+      invoice: updatedInvoice
+    });
+
+  } catch (err) {
+    await transaction.rollback(); // Rollback transaction on any error
+
+    // Centralized error logging for this controller function
+    logger.error(`An unexpected error occurred during invoice status update for ID ${req.params.id}: ${err.message}`, { stack: err.stack });
+    next(err); // Pass error to the centralized error handler middleware
+  }
+};

@@ -16,7 +16,7 @@ const errorHandler = (err, req, res, next) => {
         message: e.message
       }));
       break;
-      
+
     case 'SequelizeValidationError':
       statusCode = 400;
       message = 'Validation failed.';
@@ -26,22 +26,22 @@ const errorHandler = (err, req, res, next) => {
         type: e.type
       }));
       break;
-      
+
     case 'JsonWebTokenError':
       statusCode = 401;
       message = 'Invalid token.';
       break;
-      
+
     case 'TokenExpiredError':
       statusCode = 401;
       message = 'Token expired.';
       break;
-      
+
     case 'UnauthorizedError':
       statusCode = 401;
       message = 'Authentication required.';
       break;
-      
+
     default:
       // Handle Joi validation errors
       if (err.isJoi) {

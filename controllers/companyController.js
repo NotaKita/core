@@ -89,134 +89,134 @@ exports.createCompany = async (req, res, next) => {
 };
 
 exports.getCompanyById = async (req, res, next) => {
-    try {
-      const { id } = req.params; // Get company ID from URL parameters
-  
-      const company = await Company.findByPk(id);
-  
-      if (!company) {
-        logger.warn(`Attempt to get non-existent company with ID: ${id}`);
-        return res.status(404).json({ message: 'Company not found.' });
-      }
-  
-      logger.info(`Company retrieved successfully: ${company.name} (ID: ${id})`);
-      res.status(200).json({
-        message: 'Company retrieved successfully',
-        company
-      });
-  
-    } catch (err) {
-      logger.error(`Error retrieving company by ID ${req.params.id}: ${err.message}`, { stack: err.stack });
-      next(err);
+  try {
+    const { id } = req.params; // Get company ID from URL parameters
+
+    const company = await Company.findByPk(id);
+
+    if (!company) {
+      logger.warn(`Attempt to get non-existent company with ID: ${id}`);
+      return res.status(404).json({ message: 'Company not found.' });
     }
-  };
-  
-  exports.updateCompanyById = async (req, res, next) => {
-    try {
-      const { id } = req.params; // Company ID to update
-      const updateData = req.body;
-  
-      // 1. Input Validation using Joi for update data
-      const { error } = updateCompanySchema.validate(updateData);
-      if (error) {
-        logger.warn(`Validation error during company update for ID ${id}: ${error.details[0].message}`);
-        return res.status(400).json({
-          message: 'Company update failed due to invalid input',
-          error: error.details[0].message
-        });
-      }
-  
-      const company = await Company.findByPk(id);
-  
-      if (!company) {
-        logger.warn(`Attempt to update non-existent company with ID: ${id}`);
-        return res.status(404).json({ message: 'Company not found.' });
-      }
-  
-      // Pre-check for duplicate name (if name is being updated)
-      if (updateData.name && updateData.name !== company.name) {
-        const existingCompanyByName = await Company.findOne({ where: { name: updateData.name } });
-        if (existingCompanyByName && existingCompanyByName.id !== company.id) {
-          logger.warn(`Company update failed: Duplicate name '${updateData.name}' for ID ${id}`);
-          return res.status(409).json({
-            message: 'Company update failed.',
-            error: `The name '${updateData.name}' is already in use by another company.`
-          });
-        }
-      }
-  
-      // Pre-check for duplicate email (if email is being updated and is provided)
-      if (updateData.email && updateData.email !== company.email) {
-        const existingCompanyByEmail = await Company.findOne({ where: { email: updateData.email } });
-        if (existingCompanyByEmail && existingCompanyByEmail.id !== company.id) {
-          logger.warn(`Company update failed: Duplicate email '${updateData.email}' for ID ${id}`);
-          return res.status(409).json({
-            message: 'Company update failed.',
-            error: `The email '${updateData.email}' is already in use by another company.`
-          });
-        }
-      }
-  
-      // Update the company
-      const [updatedRows] = await Company.update(updateData, {
-        where: { id },
-        returning: true // Returns the updated rows for PostgreSQL
+
+    logger.info(`Company retrieved successfully: ${company.name} (ID: ${id})`);
+    res.status(200).json({
+      message: 'Company retrieved successfully',
+      company
+    });
+
+  } catch (err) {
+    logger.error(`Error retrieving company by ID ${req.params.id}: ${err.message}`, { stack: err.stack });
+    next(err);
+  }
+};
+
+exports.updateCompanyById = async (req, res, next) => {
+  try {
+    const { id } = req.params; // Company ID to update
+    const updateData = req.body;
+
+    // 1. Input Validation using Joi for update data
+    const { error } = updateCompanySchema.validate(updateData);
+    if (error) {
+      logger.warn(`Validation error during company update for ID ${id}: ${error.details[0].message}`);
+      return res.status(400).json({
+        message: 'Company update failed due to invalid input',
+        error: error.details[0].message
       });
-  
-      if (updatedRows === 0) {
-        // This case might be hit if the ID was found but no actual data changed or other internal issue
-        logger.warn(`Company update for ID ${id} resulted in no changes or was not found.`);
-        return res.status(400).json({ message: 'No changes applied or company not found.' });
-      }
-  
-      // Fetch the updated company to return in the response (especially important if not using returning: true or for other DBs)
-      const updatedCompany = await Company.findByPk(id);
-  
-      logger.info(`Company updated successfully: ${updatedCompany.name} (ID: ${id})`);
-      res.status(200).json({
-        message: 'Company updated successfully',
-        company: updatedCompany
-      });
-  
-    } catch (err) {
-      if (err instanceof UniqueConstraintError) {
-        // Fallback for race conditions during update
-        logger.warn(`Company update failed due to race condition or unexpected unique constraint: ${err.message}`);
+    }
+
+    const company = await Company.findByPk(id);
+
+    if (!company) {
+      logger.warn(`Attempt to update non-existent company with ID: ${id}`);
+      return res.status(404).json({ message: 'Company not found.' });
+    }
+
+    // Pre-check for duplicate name (if name is being updated)
+    if (updateData.name && updateData.name !== company.name) {
+      const existingCompanyByName = await Company.findOne({ where: { name: updateData.name } });
+      if (existingCompanyByName && existingCompanyByName.id !== company.id) {
+        logger.warn(`Company update failed: Duplicate name '${updateData.name}' for ID ${id}`);
         return res.status(409).json({
           message: 'Company update failed.',
-          error: 'A duplicate entry exists. Please try again or use different details.'
-        });
-      } else if (err instanceof ValidationError) {
-        logger.error(`Sequelize validation error during company update for ID ${req.params.id}: ${err.message}`);
-        return res.status(400).json({
-          message: 'Company update failed due to invalid data',
-          error: err.message
+          error: `The name '${updateData.name}' is already in use by another company.`
         });
       }
-      logger.error(`An unexpected error occurred during company update for ID ${req.params.id}: ${err.message}`, { stack: err.stack });
-      next(err);
     }
-  };
-  
-  exports.deleteCompanyById = async (req, res, next) => {
-    try {
-      const { id } = req.params; // Company ID to delete
-  
-      const company = await Company.findByPk(id);
-  
-      if (!company) {
-        logger.warn(`Attempt to delete non-existent company with ID: ${id}`);
-        return res.status(404).json({ message: 'Company not found.' });
+
+    // Pre-check for duplicate email (if email is being updated and is provided)
+    if (updateData.email && updateData.email !== company.email) {
+      const existingCompanyByEmail = await Company.findOne({ where: { email: updateData.email } });
+      if (existingCompanyByEmail && existingCompanyByEmail.id !== company.id) {
+        logger.warn(`Company update failed: Duplicate email '${updateData.email}' for ID ${id}`);
+        return res.status(409).json({
+          message: 'Company update failed.',
+          error: `The email '${updateData.email}' is already in use by another company.`
+        });
       }
-  
-      // Delete the company
-      await company.destroy();
-  
-      logger.info(`Company deleted successfully: ${company.name} (ID: ${id})`);
-      res.status(200).json({ message: 'Company deleted successfully.' });
-  
-    } catch (err) {
-      logger.error(`Error deleting company by ID ${req.params.id}: ${err.message}`, { stack: err.stack });
-      next(err);
     }
-  };
+
+    // Update the company
+    const [updatedRows] = await Company.update(updateData, {
+      where: { id },
+      returning: true // Returns the updated rows for PostgreSQL
+    });
+
+    if (updatedRows === 0) {
+      // This case might be hit if the ID was found but no actual data changed or other internal issue
+      logger.warn(`Company update for ID ${id} resulted in no changes or was not found.`);
+      return res.status(400).json({ message: 'No changes applied or company not found.' });
+    }
+
+    // Fetch the updated company to return in the response (especially important if not using returning: true or for other DBs)
+    const updatedCompany = await Company.findByPk(id);
+
+    logger.info(`Company updated successfully: ${updatedCompany.name} (ID: ${id})`);
+    res.status(200).json({
+      message: 'Company updated successfully',
+      company: updatedCompany
+    });
+
+  } catch (err) {
+    if (err instanceof UniqueConstraintError) {
+      // Fallback for race conditions during update
+      logger.warn(`Company update failed due to race condition or unexpected unique constraint: ${err.message}`);
+      return res.status(409).json({
+        message: 'Company update failed.',
+        error: 'A duplicate entry exists. Please try again or use different details.'
+      });
+    } else if (err instanceof ValidationError) {
+      logger.error(`Sequelize validation error during company update for ID ${req.params.id}: ${err.message}`);
+      return res.status(400).json({
+        message: 'Company update failed due to invalid data',
+        error: err.message
+      });
+    }
+    logger.error(`An unexpected error occurred during company update for ID ${req.params.id}: ${err.message}`, { stack: err.stack });
+    next(err);
+  }
+};
+
+exports.deleteCompanyById = async (req, res, next) => {
+  try {
+    const { id } = req.params; // Company ID to delete
+
+    const company = await Company.findByPk(id);
+
+    if (!company) {
+      logger.warn(`Attempt to delete non-existent company with ID: ${id}`);
+      return res.status(404).json({ message: 'Company not found.' });
+    }
+
+    // Delete the company
+    await company.destroy();
+
+    logger.info(`Company deleted successfully: ${company.name} (ID: ${id})`);
+    res.status(200).json({ message: 'Company deleted successfully.' });
+
+  } catch (err) {
+    logger.error(`Error deleting company by ID ${req.params.id}: ${err.message}`, { stack: err.stack });
+    next(err);
+  }
+};
