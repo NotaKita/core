@@ -6,9 +6,9 @@ module.exports = {
     await queryInterface.createTable('companies', {
       id: {
         allowNull: false,
-        autoIncrement: true, // Assuming you want an auto-incrementing integer ID for companies
         primaryKey: true,
-        type: Sequelize.INTEGER // Use INTEGER for auto-incrementing IDs
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
       },
       name: {
         type: Sequelize.STRING,

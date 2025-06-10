@@ -33,4 +33,13 @@ router.get('/my-companies', authMiddleware, async (req, res, next) => {
   }
 });
 
+// Route to get a single company by ID
+router.get('/:id', authMiddleware, companyController.getCompanyById);
+
+// Route to update a company by ID
+router.put('/:id', authMiddleware, companyController.updateCompanyById);
+
+// Route to delete a company by ID
+router.delete('/:id', authMiddleware, companyController.deleteCompanyById);
+
 module.exports = router;

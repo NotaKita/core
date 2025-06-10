@@ -15,7 +15,7 @@ module.exports = {
         primaryKey: true // Part of the composite primary key
       },
       companyId: {
-        type: Sequelize.INTEGER, // Match the type of your Company ID
+        type: Sequelize.UUID, // Match the type of your Company ID
         references: {
           model: 'companies', // Name of the Company table
           key: 'id'
