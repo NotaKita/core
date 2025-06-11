@@ -129,3 +129,42 @@ exports.login = async (req, res, next) => {
     next(err); // Pass to centralized error handler
   }
 };
+
+exports.getMe = async (req, res, next) => {
+  try {
+    const token = req.cookies.token;
+
+    if (!token) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Optionally: fetch full user info from DB
+    const user = await User.findByPk(decoded.id, {
+      attributes: ['id', 'email'] // don't expose password
+    });
+
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    res.json({ user });
+  } catch (err) {
+    logger.warn(`Token verification failed: ${err.message}`);
+    return res.status(401).json({ message: 'Invalid or expired token' });
+  }
+};
+
+exports.logout = (req, res) => {
+  // Clear the cookie
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  });
+
+  // Send response
+  res.json({ message: 'Logged out successfully' });
+};
